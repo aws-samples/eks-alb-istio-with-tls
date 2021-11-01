@@ -35,9 +35,9 @@ I will demonstrate installing a sample Kubernetes application called yelb and ex
 
 ```bash
 
-git clone https://github.com/saleem-mirza/aws-app-mesh-examples
+git clone https://github.com/saleem-mirza/eks-alb-istio-with-tls
 
-cd aws-app-mesh-example/blogs/eks-alb-istio-with-tls
+cd eks-alb-istio-with-tls
 
 kubectl apply -f yelb-k8s-loadbalancer.yaml
 ```
