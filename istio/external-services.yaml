@@ -1,0 +1,17 @@
+
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: www.themealdb.com
+spec:
+  hosts:
+    - "www.themealdb.com"
+  ports:
+    - number: 80
+      name: http
+      protocol: HTTP
+    - number: 443
+      name: https-443
+      protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS

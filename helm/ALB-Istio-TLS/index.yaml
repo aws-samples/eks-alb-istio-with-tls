@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  AlbIstioTls:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2021-10-20T19:25:04.3455849-04:00"
+    description: A Helm chart for Kubernetes
+    digest: cd2dd86da2619107183535522404d2b4358674eeb0d31f0ef1e3885a3799f311
+    name: AlbIstioTls
+    type: application
+    urls:
+    - AlbIstioTls-0.1.0.tgz
+    version: 0.1.0
+generated: "2021-10-20T19:25:04.3450586-04:00"
