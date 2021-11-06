@@ -1,14 +1,11 @@
 # Secure EKS traffic with ACM, ALB and Istio
 
-[Amazon Elastic Kubernetes Service (Amazon EKS)](https://aws.amazon.com/eks/) is a managed Kubernetes service that makes it easy for you to run Kubernetes on AWS and on-premises. Amazon EKS is certified Kubernetes conformant, so existing applications that run on upstream Kubernetes are compatible with Amazon EKS.
- 
-With Amazon EKS, you can take advantage of all the performance, scale, reliability, and availability of AWS infrastructure, as well as integrations with AWS networking and security services, such as [Application Load Balancers](https://aws.amazon.com/elasticloadbalancing/application-load-balancer/) for load distribution, Identity Access Manager (IAM) integration with role-based access control (RBAC), [Amazon Certificate Manager (ACM)](https://aws.amazon.com/certificate-manager/) to easily provision, manage, and deploy public and private Secure Sockets Layer/Transport Layer Security (SSL/TLS) certificates for use with AWS services and your internal connected resources. 
- 
-With AWS Certificate Manager, there is no additional charge for provisioning public or private SSL/TLS certificates you use with ACM-integrated services, such as Elastic Load Balancing and API Gateway. Amazon Elastic Kubernetes Services (Amazon EKS) is leading platform of choice for customers of all sizes, to run their most sensitive and mission critical applications because of its security, reliability, and scalability. 
- 
-On the other hand, [Istio](https://istio.io/) is one of the popular choices for implementing a service mesh to simplify observability, traffic management and security. While helping customers to take advantage of Amazon EKS flexibility, elasticity, and reliability, customer has asked me to help in integration of Istio with AWS services, especially TLS certificates in ACM.
- 
-In this blog post, I will focus on how take advantage of AWS services to encrypt in-bound traffic using TLS certificates in ACM and Elastic Application Load Balancer. HTTPS traffic will be terminated on ALB and then forward to Istio for further processing to take advantage of traffic management, [mTLS](https://en.wikipedia.org/wiki/Mutual_authentication), and observability. However, before going into details, I have made few assumptions.
+[Istio](https://istio.io/) is one of the popular choices for implementing a service mesh to simplify observability, traffic management and security. 
+Customers are adopting Amazon EKS to scale their Kubernetes workloads to take advantage of flexibility, elasticity, and reliability of AWS platform. 
+
+I was helping a customer to migrate their Kubernetes workload from their on-premises data-center into AWS. Customer wished to keep using Istio as their preferred Service. However, they were struggling to implement end-to-end encryption using certificate in Amazon Certificate Manager (ACM) and Istio in EKS environment. I have noticed this was common ask by community, so decided to write a blog about it.
+
+In this blog post, I will focus on how take advantage of AWS services to implement end-to-end encryption using TLS certificates in ACM, Elastic Application Load Balancer and Istio as service mesh. However, before going into details, I have made few assumptions.
 
 ## Assumptions and pre-requisites:
 
