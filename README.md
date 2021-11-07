@@ -1,4 +1,4 @@
-# Secure EKS traffic with ACM, ALB and Istio
+# Secure end-to-end traffic on EKS using TLS certificate in ACM, ALB and Istio
 
 [Istio](https://istio.io/) is one of the popular choices for implementing a service mesh to simplify observability, traffic management and security. 
 Customers are adopting Amazon EKS to scale their Kubernetes workloads to take advantage of flexibility, elasticity, and reliability of AWS platform. 
@@ -16,6 +16,7 @@ In this blog post, I will focus on how take advantage of AWS services to impleme
     * [eksctl](https://eksctl.io/)
     * [helm](https://helm.sh/)
     * [git](https://git-scm.com/downloads)
+    * [openssl](https://www.openssl.org)
     * [istioctl](https://istio.io/latest/docs/setup/getting-started/)
     * [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
 * AWS [Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller) v2.3 or newer is installed and configured on your EKS cluster. 
@@ -47,10 +48,9 @@ Our future state of applications is to configure TLS certificate from ACM with A
 
 ![](./yelb-images/yelb-app-future-state.svg)
 
-
 ### Install and configure Istio
 
- I will install Istio using ``istioctl`` utility. This will install Istio in ``istio-system`` namespace and configure ``istio-ingressgateway`` service of type load balancer. Since Istio does not directly support TLS certificates from ACM, I will put ALB in front of it. Traffic from ALB will be forwarded to Istio ingress gateway for further processing such as integration with mTLS, traffic routing etc.
+I am installing Istio using ``istioctl`` and change service type of ``istio-ingressgateway`` to ``NodePort``. The service type of NodePort is required when forwarding traffic from ALB to EC2 instances.
 
 ```bash
 istioctl install \
@@ -74,7 +74,28 @@ kubectl get po
 You will notice that there are two containers running in each pod. 
 ![](./yelb-images/yelb-istio-injection.png)
 
-Now, I will configure traffic routing for istio using gateway and virtual services.
+### Generate self-signed TLS certificates
+
+Generate self-signed certificate. We will use key/pair to encrypt traffic from ALB to [Istio Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/). 
+
+```bash
+openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+  -keyout certs/key.pem -out certs/cert.pem -subj "/CN=yourdomain.com" \
+  -addext "subjectAltName=DNS:yourdomain"
+```
+
+Generate Kubernetes secret containing ``key.pem`` and ``cert.pem``. We will use it with Istio Gateway to implement traffic encryption.
+
+```bash
+kubectl create -n istio-system secret generic tls-secret \
+--from-file=key=certs/key.pem \
+--from-file=cert=certs/cert.pem
+
+```
+
+### Configure Istio Gateway and Virtual Services
+
+I will configure traffic routing for istio using gateway and virtual services.
 
 ```bash
 # install and configure istio gateway 
@@ -87,15 +108,46 @@ kubectl apply -f istio/external-services.yaml
 kubectl apply -f istio/yelb-services.yaml
 ```
 
-We have configured `istio-ingressgateway` as NodePort service, but it can not accept traffic without exposing Kubernetes worker node to the user. However, Istio can not use TLS certificate in ACM, I will use AWS Application Load Balancer to terminate HTTPS traffic and forward to Istio ingress gateway in EKS cluster for further processing.
+I have attached self-signed certificates to Ingress Gateway. Istio will use these certificates to encrypt traffic between ALB and Istio which is key part to implement end-to-end encryption.
 
-We need ``arn`` of ACM public certificate and domain configured in Route53. I’ll create [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) resource to receive traffic from ALB and forward to Istio gateway. You will need to edit ingress resource to configure annotations for AWS Application Load Balancer with TLS certificates.
+Let's look at Istio Gateway.
+
+```bash 
+cat istio/gateway.yaml
+```
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: yelb-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 443
+        name: https-443
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: "tls-secret"
+      hosts:
+        - "*"
+```
+You will notice that I am using Kubernetes secret named `tls-secret` as `credentialName` which we generated earlier. This serect contains openssl generated key/cert. Gateway `yelb-gateway` is listening on port `443` for encrypted traffic.
+
+### Configure ALB Ingress Resource
+
+Istio can not use TLS certificate in ACM directly. However, I will use ACM certificates with AWS Application Load Balancer to terminate HTTPS traffic and then forward to Istio ingress gateway for further processing. 
+
+I need ``arn`` of ACM public certificate and domain configured in Route53. I’ll create [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) resource to receive traffic from ALB and forward to Istio gateway. You will need to edit ingress resource to configure annotations for AWS Application Load Balancer with TLS certificates.
 To make it simple, I have created a helm chart which accepts ACM certificate `arn` and host name as parameter; generate and install ingress correctly.
 
 
 ```bash
 helm install alb-istio-ingress ./helm/ALB-Istio-TLS \
---set host=[blog.yourdomain.com](http://blog.yourdomain.com/) \
+--set host=blog.yourdomain.com \
 --set certificate_arn=arn:aws:acm:xxxxxx:999999999999:certificate/xxxxxxxxx
 ```
 
@@ -108,8 +160,50 @@ Once ingress is installed, it will provision AWS Application Load Balancer, bind
 kubectl get ingress gw-ingress -n istio-system -o yaml
 ```
 
-The generated output will look like snippet below. Note highlighted ACM certificate `arn` and domain name.
-![](./yelb-images/yelb-gw-ingress-resource.png)
+The generated output will look like snippet below. Note values corresponding to `alb.ingress.kubernetes.io/backend-protocol` and `host` fields.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz/ready
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/backend-protocol: HTTPS
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/actions.ssl-redirect: '{"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxxxxx:999999999999:certificate/xxxxxxxxx
+  name: gw-ingress
+  namespace: istio-system
+spec:
+  rules:
+  - host: blog.yourdomain.com
+    http:
+      paths:      
+      - backend:
+          service:
+            name: ssl-redirect
+            port: 
+              name: use-annotation
+        path: /    
+        pathType: Prefix  
+      - backend:
+          service:
+            name: istio-ingressgateway
+            port: 
+              number: 15021
+        path: /healthz/ready
+        pathType: Prefix
+      - backend:
+          service:
+            name: istio-ingressgateway
+            port: 
+              number: 443
+        path: /
+        pathType: Prefix
+```
 
 Get ALB Load balancer DNS and make note of it.
 
@@ -118,18 +212,26 @@ echo $(kubectl get ingress gw-ingress -n istio-system \
 -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
 ```
 
-
 We should get output similar to this 
 
 ```bash
 k8s-istiosys-xxxxxxxxxxxxxxxxxxx.us-east-1.elb.amazonaws.com
 ```
 
+### Create DNS record in Route53
 
-Create a record in Route53 to bind your domain with ALB.
+Create a record in Route53 to bind your domain with ALB. Make sure you are creating DNS record in corresponding hosting zone, matching domain name.
+I have compiled list of useful resources to learn more about DNS records and hosting zones in AWS.
+
+* [Registering domain names using Amazon Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/registrar.html)
+* [Working with public hosted zones](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/AboutHZWorkingWith.html)
+* [Working with records](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/rrsets-working-with.html)
+* [Routing traffic to an ELB load balancer](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-to-elb-load-balancer.html)
+
 ![](./yelb-images/yelb-route53-alb-record.png)
 
-It can take few minutes to populate DNS servers. Open blog.yourdomain.com in web browser, you will notice pad lock in address bar for secure TLS communication. 
+It can take few minutes to populate DNS servers. Open blog.yourdomain.com in web browser, you will notice pad lock in address bar for secure TLS communication. We have a Kubernetes application running in EKS with end-to-end encryption enabled using TLS certficate from ACM, Application Load Balancer (ALB) and Istio.
+
 ![](./yelb-images/yelb-https.png)
 
 ### ****Cleaning up****

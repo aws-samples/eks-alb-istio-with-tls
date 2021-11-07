@@ -43,7 +43,7 @@ metadata:
 spec:
   outboundTrafficPolicy:
     mode: REGISTRY_ONLY
-    # mode: ALLOW_ANY
+
 ---
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
