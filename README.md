@@ -26,7 +26,7 @@ In this blog post, I will focus on how take advantage of AWS services to impleme
 I will demonstrate installing a sample Kubernetes application called yelb and expose it using Kubernetes service of type load balancer. Later, I will configure ALB ingress controller to pass this traffic to Istio for further processing.
 
 
-> Note: I am using Bash terminal for example code but it is not strictly a required. Example code can be easily tweaked for Microsoft Windows Terminal. 
+> Note: I am using Bash terminal for code, but it is not strictly a required. Example code can be easily tweaked for Microsoft Windows Terminal. 
 
 
 ### Install yelb application
@@ -40,11 +40,11 @@ cd eks-alb-istio-with-tls
 kubectl apply -f yelb-k8s-loadbalancer.yaml
 ```
 
-Lets visualize our current state of application.
+Let's visualize our current state of application.
 ![](./yelb-images/yelb-app-current-state.svg)
 
 
-Our future state of applications is to configure TLS certificate from ACM with Application Load Balancer (ALB) to encrypt inbound traffic. We also want to take advantage of Istio for traffic routing and mTLS  inside EKS cluster. The target state of cluster will looks like:
+Our future state of applications is to configure TLS certificate from ACM with Application Load Balancer (ALB) to encrypt inbound traffic. We also want to take advantage of Istio for traffic routing and mTLS  inside EKS cluster. The target state of cluster will look like:
 
 ![](./yelb-images/yelb-app-future-state.svg)
 
@@ -64,7 +64,7 @@ Verify Istio installation using `kubectl get po -n istio-system`, you should see
 # label default namespace
 kubectl label default ns istio-injection=enabled —overwrite
 
-# delete existing pods so that istio can inject sidecar
+# delete existing pods so that Istio can inject sidecar
 kubectl delete po --all
 
 # get list of pods
@@ -95,16 +95,16 @@ kubectl create -n istio-system secret generic tls-secret \
 
 ### Configure Istio Gateway and Virtual Services
 
-I will configure traffic routing for istio using gateway and virtual services.
+I will configure traffic routing for Istio using gateway and virtual services.
 
 ```bash
-# install and configure istio gateway 
+# install and configure Istio gateway 
 kubectl apply -f istio/gateway.yaml
 
 # install and configure external service
 kubectl apply -f istio/external-services.yaml
 
-# install and configure istio virtual services for yelb
+# install and configure Istio virtual services for yelb
 kubectl apply -f istio/yelb-services.yaml
 ```
 
@@ -135,7 +135,7 @@ spec:
       hosts:
         - "*"
 ```
-You will notice that I am using Kubernetes secret named `tls-secret` as `credentialName` which we generated earlier. This serect contains openssl generated key/cert. Gateway `yelb-gateway` is listening on port `443` for encrypted traffic.
+You will notice that I am using Kubernetes secret named `tls-secret` as `credentialName` which we generated earlier. The secret contains openssl generated key/cert. Gateway `yelb-gateway` is listening on port `443` for encrypted traffic.
 
 ### Configure ALB Ingress Resource
 
@@ -154,7 +154,7 @@ helm install alb-istio-ingress ./helm/ALB-Istio-TLS \
 > Note: Make sure to use your own valid domain and certificate **arn**.
 
 
-Once ingress is installed, it will provision AWS Application Load Balancer, bind it with ACM certificate for HTTPS traffic and forward traffic to istio resources inside EKS cluster. You can get generated manifest of Ingress resource using
+Once ingress is installed, it will provision AWS Application Load Balancer, bind it with ACM certificate for HTTPS traffic and forward traffic to Istio resources inside EKS cluster. You can get generated manifest of Ingress resource using
 
 ```bash
 kubectl get ingress gw-ingress -n istio-system -o yaml
@@ -182,7 +182,8 @@ metadata:
           "StatusCode": "HTTP_301"
         }
       }    
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxxxxx:999999999999:certificate/xxxxxxxxx
+    alb.ingress.kubernetes.io/certificate-arn: |
+      arn:aws:acm:xxxxxx:999999999999:certificate/xxxxxxxxx
   name: gw-ingress
   namespace: istio-system
 spec:
@@ -238,7 +239,7 @@ I have compiled list of useful resources to learn more about DNS records and hos
 
 ![](./yelb-images/yelb-route53-alb-record.png)
 
-It can take few minutes to populate DNS servers. Open blog.yourdomain.com in web browser, you will notice pad lock in address bar for secure TLS communication. We have a Kubernetes application running in EKS with end-to-end encryption enabled using TLS certficate from ACM, Application Load Balancer (ALB) and Istio.
+It can take few minutes to populate DNS servers. Open blog.yourdomain.com in web browser, you will notice pad lock in address bar for secure TLS communication. We have a Kubernetes application running in EKS with end-to-end encryption enabled using TLS certificate from ACM, Application Load Balancer (ALB) and Istio.
 
 ![](./yelb-images/yelb-https.png)
 
