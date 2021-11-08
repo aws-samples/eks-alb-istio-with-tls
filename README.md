@@ -173,7 +173,15 @@ metadata:
     alb.ingress.kubernetes.io/healthcheck-port: traffic-port
     alb.ingress.kubernetes.io/backend-protocol: HTTPS
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
-    alb.ingress.kubernetes.io/actions.ssl-redirect: '{"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
+    alb.ingress.kubernetes.io/actions.ssl-redirect: |
+      {
+        "Type": "redirect", 
+        "RedirectConfig": { 
+          "Protocol": "HTTPS", 
+          "Port": "443", 
+          "StatusCode": "HTTP_301"
+        }
+      }    
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxxxxx:999999999999:certificate/xxxxxxxxx
   name: gw-ingress
   namespace: istio-system
