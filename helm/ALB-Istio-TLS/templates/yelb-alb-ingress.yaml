@@ -23,7 +23,8 @@ metadata:
           "StatusCode": "HTTP_301"
         }
       }
-    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.certificate_arn }}
+    alb.ingress.kubernetes.io/certificate-arn: |
+      {{ .Values.certificate_arn }}
     {{- end }}
   name: gw-ingress
   namespace: istio-system
