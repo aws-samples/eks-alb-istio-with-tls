@@ -41,12 +41,12 @@ kubectl apply -f yelb-k8s-loadbalancer.yaml
 ```
 
 Let's visualize our current state of application.
-![](./yelb-images/yelb-app-current-state.svg)
+![](./yelb-images/yelb-app-current-state.png)
 
 
 Our future state of applications is to configure TLS certificate from ACM with Application Load Balancer (ALB) to encrypt inbound traffic. We also want to take advantage of Istio for traffic routing and mTLS  inside EKS cluster. The target state of cluster will look like:
 
-![](./yelb-images/yelb-app-future-state.svg)
+![](./yelb-images/yelb-app-future-state.png)
 
 ### Install and configure Istio
 
