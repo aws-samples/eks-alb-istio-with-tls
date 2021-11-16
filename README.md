@@ -1,7 +1,7 @@
 # Secure end-to-end traffic on EKS using TLS certificate in ACM, ALB and Istio
 
-[Istio](https://istio.io/) is one of the popular choices for implementing a service mesh to simplify observability, traffic management and security. 
-Customers are adopting [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/) to scale their [Kubernetes](https://kubernetes.io/) workloads to take advantage of flexibility, elasticity, and reliability of the AWS platform. 
+[Istio](https://istio.io/) is one of the popular choices for implementing a service mesh to simplify observability, traffic management and security.
+Customers are adopting [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/) to scale their [Kubernetes](https://kubernetes.io/) workloads to take advantage of flexibility, elasticity, and reliability of the AWS platform.
 
 I was helping a customer to migrate [Kubernetes](https://kubernetes.io/) workload from on-premises data-center into [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/). The Customer had an existing investment in Istio and wanted to continue using it in the EKS environment as their preferred service mesh. However, the customer was struggling to implement end-to-end encryption using Transport Layer Security (TLS) in the AWS environment. After helping the customer, I decided to write a blog on this topic to simplify others' journey.
 
@@ -12,21 +12,21 @@ In this blog post, I will focus on implementing end-to-end encryption using TLS 
 * Existing AWS account with proper permissions.
 * Existing and working EKS cluster with Kubernetes v1.21
 * Installed and configured latest versions of utilities on the workspace you will use to interact with AWS and EKS cluster
-    * [aws cli](https://aws.amazon.com/cli/)
-    * [eksctl](https://eksctl.io/)
-    * [helm](https://helm.sh/)
-    * [git](https://git-scm.com/downloads)
-    * [openssl](https://www.openssl.org)
-    * [istioctl](https://istio.io/latest/docs/setup/getting-started/)
-    * [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
-* AWS [Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller) v2.3 or newer is installed and configured on your EKS cluster. 
-* Existing and valid certificate in AWS Certificate Manager (ACM). You can [request](https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-public.html) one if not available. 
+  * [aws cli](https://aws.amazon.com/cli/)
+  * [eksctl](https://eksctl.io/)
+  * [helm](https://helm.sh/)
+  * [git](https://git-scm.com/downloads)
+  * [openssl](https://www.openssl.org)
+  * [istioctl](https://istio.io/latest/docs/setup/getting-started/)
+  * [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+* AWS [Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller) v2.3 or newer is installed and configured on your EKS cluster.
+* Existing and valid certificate in AWS Certificate Manager (ACM). You can [request](https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-public.html) one if not available.
 
 
 I will demonstrate installing a sample Kubernetes application called yelb and expose it using Kubernetes service of type load balancer. Later, I will configure the ALB ingress controller to pass this traffic to Istio for further processing.
 
 
-> Note: I am using Bash terminal for code, but it is not strictly required. Example code can be easily tweaked for Microsoft Windows Terminal. 
+> Note: I am using Bash terminal for code, but it is not strictly required. Example code can be easily tweaked for Microsoft Windows Terminal.
 
 
 ### Install yelb application
@@ -41,14 +41,18 @@ kubectl apply -f yelb-k8s-loadbalancer.yaml
 ```
 
 Let's visualize our current state of application.
+
+
 ![Current State of Application](./yelb-images/yelb-app-current-state.png)
-Figure 01: Current State of Application
+###### *Figure 01: Current State of Application*
 
 
 Our future state of applications is to configure a TLS certificate from ACM with Application Load Balancer (ALB) to encrypt inbound traffic. We also want to take advantage of Istio for traffic routing and mTLS inside the EKS cluster. The target state of cluster will look like Figure 02
 
+
 ![Future State of Application](./yelb-images/yelb-app-future-state.png)
-Figure 02: Target state of Application
+###### *Figure 02: Target state of Application*
+
 
 ### Install and configure Istio
 
@@ -60,7 +64,7 @@ istioctl install \
 --set values.gateways.istio-ingressgateway.type=NodePort
 ```
 
-Verify Istio installation using `kubectl get po -n istio-system`, you should see pods running. Next, attach a label to  ``default`` namespace. This will tell Istio to inject a proxy sidecar to pods running in the namespace. You will need to delete existing pods in the default namespace. 
+Verify Istio installation using `kubectl get po -n istio-system`, you should see pods running. Next, attach a label to the ``default`` namespace. This will tell Istio to inject a proxy sidecar to pods running in the namespace. You will need to delete existing pods in the default namespace.
 
 ```bash
 # label default namespace
@@ -73,13 +77,14 @@ kubectl delete po --all
 kubectl get po
 ```
 
-You will notice that there are two containers running in each pod. 
+You will notice that there are two containers running in each pod.
+
 ![Kubernetes Pods for yelb Application](./yelb-images/yelb-istio-injection.png)
-Figure 03: Kubernetes Pods for yelb Application
+###### *Figure 03: Kubernetes Pods for yelb Application*
 
 ### Generate self-signed TLS certificates
 
-Generate self-signed certificates. We will use key/pair to encrypt traffic from ALB to [Istio Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/). 
+Generate self-signed certificates. We will use a key/pair to encrypt traffic from ALB to [Istio Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/).
 
 ```bash
 openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
@@ -142,9 +147,9 @@ You will notice that I am using the Kubernetes secret named `tls-secret` as `cre
 
 ### Configure ALB Ingress Resource
 
-Istio can not use the TLS certificate in ACM directly. However, I will use ACM certificates with AWS Application Load Balancer to terminate HTTPS traffic and then forward to Istio ingress gateway for further processing. 
+Istio can not use the TLS certificate in ACM directly. However, I will use ACM certificates with AWS Application Load Balancer to terminate HTTPS traffic and then forward to Istio ingress gateway for further processing.
 
-I need ``arn`` of ACM public certificate and domain configured in Route53. I’ll create a [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) resource to receive traffic from ALB and forward to Istio gateway. You will need to edit ingress resource to configure annotations for AWS Application Load Balancer with TLS certificates.
+I need ``arn`` of ACM public certificate and domain configured in Route53. I’ll create an [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) resource to receive traffic from ALB and forward to Istio gateway. You will need to edit ingress resource to configure annotations for AWS Application Load Balancer with TLS certificates.
 To make it simple, I have created a helm chart which accepts ACM certificate `arn` and host name as parameters; generate and install ingress correctly.
 
 
@@ -224,7 +229,7 @@ echo $(kubectl get ingress gw-ingress -n istio-system \
 -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
 ```
 
-We should get output similar to this 
+We should get output similar to this
 
 ```bash
 k8s-istiosys-xxxxxxxxxxxxxxxxxxx.us-east-1.elb.amazonaws.com
@@ -240,13 +245,14 @@ I have compiled a list of useful resources to learn more about DNS records and h
 * [Working with records](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/rrsets-working-with.html)
 * [Routing traffic to an ELB load balancer](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-to-elb-load-balancer.html)
 
+
 ![DNS record screen](./yelb-images/yelb-route53-alb-record.png)
-Figure 03: Create DNS record
+###### *Figure 04: Create DNS record*
 
 It can take few minutes to populate DNS servers. Open blog.yourdomain.com in the web browser, you will notice a padlock in the address bar for secure TLS communication. We have a Kubernetes application running in EKS with end-to-end encryption enabled using TLS certificate from ACM, Application Load Balancer (ALB) and Istio.
 
 ![Secured yelb Applicatin](./yelb-images/yelb-https.png)
-Figure 04: Secured application with TLS 
+###### *Figure 05: Secured application with TLS*
 
 ### ****Cleaning up****
 
