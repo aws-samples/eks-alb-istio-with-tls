@@ -1,4 +1,4 @@
-# Secure end-to-end traffic on EKS using TLS certificate in ACM, ALB and Istio
+## Secure end-to-end traffic on EKS using TLS certificate in ACM, ALB and Istio
 
 [Istio](https://istio.io/) is one of the popular choices for implementing a service mesh to simplify observability, traffic management and security.
 Customers are adopting [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/) to scale their [Kubernetes](https://kubernetes.io/) workloads to take advantage of flexibility, elasticity, and reliability of the AWS platform.
@@ -7,7 +7,7 @@ I was helping a customer to migrate [Kubernetes](https://kubernetes.io/) workloa
 
 In this blog post, I will focus on implementing end-to-end encryption using TLS certificate in [Amazon Certificate Manager (ACM)](https://aws.amazon.com/certificate-manager/), [Elastic Application Load Balancer (ALB)](https://aws.amazon.com/elasticloadbalancing/application-load-balancer/) and [Istio](https://istio.io/) in EKS environment. However, before going into details, I have made a few assumptions.
 
-## Assumptions and pre-requisites:
+### Assumptions and pre-requisites:
 
 * Existing AWS account with proper permissions.
 * Existing and working EKS cluster with Kubernetes v1.21
@@ -257,3 +257,11 @@ It can take few minutes to populate DNS servers. Open blog.yourdomain.com in the
 ### ****Cleaning up****
 
 To avoid incurring future charges, delete the resources.
+
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+## License
+
+This library is licensed under the MIT-0 License. See the LICENSE file.
