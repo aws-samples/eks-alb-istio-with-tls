@@ -33,7 +33,7 @@ I will demonstrate installing a sample Kubernetes application called yelb and ex
 
 ```bash
 
-git clone https://github.com/saleem-mirza/eks-alb-istio-with-tls
+git clone https://github.com/aws-samples/eks-alb-istio-with-tls
 
 cd eks-alb-istio-with-tls
 
