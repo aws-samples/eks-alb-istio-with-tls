@@ -256,7 +256,30 @@ It can take few minutes to populate DNS servers. Open blog.yourdomain.com in the
 
 ### ****Cleaning up****
 
-To avoid incurring future charges, delete the resources.
+To undo changes made in Kubernetes cluster, execute following CLI commands in terminal
+
+```bash
+# remove label from default namespace
+kubectl label default ns istio-injection-
+
+# install and configure Istio gateway
+kubectl delete -f istio/gateway.yaml
+
+# install and configure external service
+kubectl delete -f istio/external-services.yaml
+
+# install and configure Istio virtual services for yelb
+kubectl delete -f istio/yelb-services.yaml
+
+# uninstall yelb application
+kubectl delete -f yelb-k8s-loadbalancer.yaml
+
+# uninstall istio
+istioctl x uninstall -purge
+
+# delete istio namespace
+kubectl delete namespace istio-system
+```
 
 ## Security
 
