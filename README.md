@@ -79,8 +79,13 @@ kubectl get po
 
 You will notice that there are two containers running in each pod.
 
-![Kubernetes Pods for yelb Application](./yelb-images/yelb-istio-injection.png)
-###### *Figure 03: Kubernetes Pods for yelb Application*
+```
+NAME                              READY   STATUS    RESTARTS   AGE
+redis-server-8569c76564-mm26f     2/2     Running   0          47s
+yelb-appserver-6455cbcccb-qh9n4   2/2     Running   0          47s
+yelb-db-7c776c7d7c-546vn          2/2     Running   0          47s
+yelb-ui-f8bf879c9-hb2p4           2/2     Running   0          47s
+```
 
 ### Generate self-signed TLS certificates
 
@@ -247,12 +252,12 @@ I have compiled a list of useful resources to learn more about DNS records and h
 
 
 ![DNS record screen](./yelb-images/yelb-route53-alb-record.png)
-###### *Figure 04: Create DNS record*
+###### *Figure 03: Create DNS record*
 
 It can take few minutes to populate DNS servers. Open blog.yourdomain.com in the web browser, you will notice a padlock in the address bar for secure TLS communication. We have a Kubernetes application running in EKS with end-to-end encryption enabled using TLS certificate from ACM, Application Load Balancer (ALB) and Istio.
 
 ![Secured yelb Applicatin](./yelb-images/yelb-https.png)
-###### *Figure 05: Secured application with TLS*
+###### *Figure 04: Secured application with TLS*
 
 ### ****Cleaning up****
 
