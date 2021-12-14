@@ -183,7 +183,8 @@ metadata:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/healthcheck-path: /healthz/ready
-    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-port: status-port
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
     alb.ingress.kubernetes.io/backend-protocol: HTTPS
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
     alb.ingress.kubernetes.io/actions.ssl-redirect: |
@@ -211,13 +212,6 @@ spec:
               name: use-annotation
         path: /    
         pathType: Prefix  
-      - backend:
-          service:
-            name: istio-ingressgateway
-            port: 
-              number: 15021
-        path: /healthz/ready
-        pathType: Prefix
       - backend:
           service:
             name: istio-ingressgateway
