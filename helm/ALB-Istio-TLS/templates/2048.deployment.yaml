@@ -1,0 +1,128 @@
+{{- if .Values.game2048.host }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: My2048App
+  name: '2048'
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: My2048App
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: My2048App
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - image: alexwhen/docker-2048
+          imagePullPolicy: Always
+          name: '2048'
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 50Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      shareProcessNamespace: false
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-2048
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: My2048App
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    {{- if .Values.certificate_arn }}
+    alb.ingress.kubernetes.io/actions.ssl-redirect: '{"Type": "redirect", "RedirectConfig":
+     { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
+    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.certificate_arn }}
+    {{- end }}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/backend-protocol: HTTPS
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz/ready
+    alb.ingress.kubernetes.io/healthcheck-port: status-port
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/success-codes: '200'
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/group.name: istio
+    alb.ingress.kubernetes.io/group.order: '2'
+  name: ing-2048
+  namespace: istio-system
+spec:
+  rules:
+    - host: {{ .Values.game2048.host }}
+      http:
+        paths:
+          {{- if .Values.certificate_arn }} 
+          - backend:
+              service:
+                name: ssl-redirect
+                port:
+                  name: use-annotation
+            path: /
+            pathType: Prefix
+          {{- end }} 
+          - backend:
+              service:
+                name: istio-ingressgateway
+                port:
+                  number: 443
+            path: /
+            pathType: Prefix
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: '2048'
+spec:
+  hosts:
+    - {{ .Values.game2048.host }}
+  gateways:
+    - yelb-gateway
+  http:
+    - route:
+        - destination:
+            host: svc-2048
+            port:
+              number: 80
+      match:
+        - uri:
+            prefix: /
+{{- end }}
