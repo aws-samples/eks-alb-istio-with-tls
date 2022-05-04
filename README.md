@@ -274,7 +274,7 @@ kubectl delete -f istio/yelb-services.yaml
 kubectl delete -f yelb-k8s-loadbalancer.yaml
 
 # uninstall istio
-istioctl x uninstall -purge
+istioctl x uninstall --purge
 
 # delete istio namespace
 kubectl delete namespace istio-system
