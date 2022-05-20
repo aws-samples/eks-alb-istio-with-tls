@@ -68,7 +68,7 @@ Verify Istio installation using `kubectl get po -n istio-system`, you should see
 
 ```bash
 # label default namespace
-kubectl label default ns istio-injection=enabled --overwrite
+kubectl label ns default istio-injection=enabled --overwrite
 
 # delete existing pods so that Istio can inject sidecar
 kubectl delete po --all
@@ -259,7 +259,7 @@ To undo changes made in Kubernetes cluster, execute following CLI commands in te
 
 ```bash
 # remove label from default namespace
-kubectl label default ns istio-injection-
+kubectl label ns default istio-injection-
 
 # install and configure Istio gateway
 kubectl delete -f istio/gateway.yaml
