@@ -150,6 +150,8 @@ spec:
 ```
 You will notice that I am using the Kubernetes secret named `tls-secret` as `credentialName` which we generated earlier. The secret contains openssl generated key/cert. Gateway `yelb-gateway` is listening on port `443` for encrypted traffic.
 
+Note on SNI: ALB Ingress will not send an SNI (server name indication) to Istio so `hosts` must be `"*"` otherwise Istio will attempt to match it and result in 404.
+
 ### Configure ALB Ingress Resource
 
 Istio can not use the TLS certificate in ACM directly. However, I will use ACM certificates with AWS Application Load Balancer to terminate HTTPS traffic and then forward to Istio ingress gateway for further processing.
